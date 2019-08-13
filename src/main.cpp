@@ -9,12 +9,25 @@ string filen="Dataset.txt";
 
 int main(){
     zset zset1;
-    for(int i=0;i<=9;i++)
-        zset1.create_or_inc("cxl" + to_string(i));
+    fstream fs("/home/cptjack/Dataset.txt");
+    string str;
+    fs.seekg(0, ios_base::end);
+    unsigned long nFileLen = fs.tellg();
+    int pos=nFileLen/10;
+    fs.seekg(pos);
+    while(fs.peek()!='\n')
+        fs.seekg(++pos);
+    fs.seekg(++pos);
+    fs>>str;
+    for(int i=0;i<100;++i) {
+        fs >> str;
+        zset1.create_or_inc(str);
+    }
     zset1.printdebug();
     int a=1;
-    zset1.pop();
+    zset1.pop(3);
     zset1.printdebug();
+
     zset1.pop();
     zset1.printdebug();
     zset1.pop();
