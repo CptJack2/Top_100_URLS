@@ -10,7 +10,7 @@ string filen="Dataset.txt";
 int main(){
     zset zset1;
     for(int i=0;i<=9;i++)
-        zset1.CreateOrInc("cxl"+to_string(i));
+        zset1.create_or_inc("cxl" + to_string(i));
     zset1.printdebug();
     int a=1;
     zset1.pop();

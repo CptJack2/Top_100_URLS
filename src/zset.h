@@ -17,7 +17,7 @@ public:
     zset();
     bool add(const string& key);
     bool inc(const string& key);
-    void CreateOrInc(const string& key);
+    void create_or_inc(const string &key);
     //return top url and its count
     vector<pair<string,int>> pop(int num=1);
     void printdebug();

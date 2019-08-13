@@ -76,7 +76,7 @@ vector<pair<string,int>> zset::pop(int num){
         m_vec[i]->second.index=i;
     return ret;
 }
-void zset::CreateOrInc(const string& key){
+void zset::create_or_inc(const string &key){
     auto it=m_map.find(key);
     if(it==m_map.end()){
         zmap_t::iterator it=m_map.insert(make_pair(key,node_t(1,0))).first;
