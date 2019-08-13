@@ -66,7 +66,8 @@ void zset::printdebug(){
 }
 vector<pair<string,int>> zset::pop(int num){
     vector<pair<string,int>> ret;
-    for(int i=1;i<=num;++i){
+    int size=min<int>(num,m_vec.size());
+    for(int i=1;i<=size;++i){
         //wtf?! using the same comparator as push will cause the elements with same value being swaped, shouldn't suppose to be like that
         pop_heap(m_vec.begin(),m_vec.end(),zset::fcmp_less_equal);
         ret.emplace_back(m_vec.back()->first,m_vec.back()->second.count);
