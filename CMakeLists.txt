@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.4.1)
+project(Top_100_URL)
+set(CMAKE_CXX_STANDARD 11)
+SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+add_library(zset ./src/zset.cpp)
+add_executable(main ./src/main.cpp)
+target_link_libraries(main zset)
