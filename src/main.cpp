@@ -6,31 +6,11 @@
 
 using namespace std;
 
-unsigned long Sharding_Num=2;//120;
+unsigned long Sharding_Num=120;
 int TopK=100;
 string file_name="../data/Dataset.txt";
 unsigned long file_len=0;
 
-void thread_func(unsigned long shard_index){
-    unsigned long pos=file_len*shard_index/Sharding_Num;
-    fstream ifs(file_name);
-    //find a new line from the speicified sharding position
-    ifs.seekg(pos);
-    while(ifs.peek()!='\n')
-        ifs.seekg(++pos);
-    zset myzset;
-    string str;
-    //mind this while expression, it mustn't miss any line
-    do{
-        ifs>>str;
-        myzset.create_or_inc(str);
-    }while((pos=ifs.tellg())<=file_len*(shard_index+1)/Sharding_Num);
-    auto vec=myzset.pop(TopK);
-    fstream ofs("../data/res_"+to_string(shard_index)+".txt",ios::out);
-    for(auto ele:vec){
-        ofs<<ele.first<<endl<<ele.second<<endl;
-    }
-}
 void map_files(){
     fstream ifs(file_name);
     vector<ofstream> ofss(Sharding_Num);
@@ -97,14 +77,13 @@ void merge(){
     ofs.close();
 }
 int main(){
-    //initiailize
     //get file length
     fstream fs(file_name);
     fs.seekg(0, ios_base::end);
     file_len = fs.tellg();
     fs.close();
-//    map_files();
-//    reduce_files();
+    map_files();
+    reduce_files();
     merge();
     return 0;
 }
