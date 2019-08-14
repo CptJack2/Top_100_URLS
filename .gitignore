@@ -36,3 +36,5 @@
 bin/
 
 cmake-build-debug/
+
+data/
