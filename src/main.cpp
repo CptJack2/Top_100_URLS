@@ -3,6 +3,8 @@
 #include <fstream>
 #include <string>
 #include <list>
+#include <thread>
+#include <mutex>
 
 using namespace std;
 
@@ -32,24 +34,29 @@ void thread_func(unsigned long shard_index){
         ofs<<ele.first<<endl<<ele.second<<endl;
     }
 }
-void map_files(){
-    fstream ifs(file_name);
-    vector<ofstream> ofss(Sharding_Num);
-    for(int i=0;i<Sharding_Num;++i)
-        ofss[i].open("../data/shard_"+to_string(i)+".txt",ios::out);
-
-    hash<string> hasher;
+vector<ofstream> map_ofss(Sharding_Num);
+vector<mutex> map_ofss_mutexs(Sharding_Num);
+vector<unsigned long> map_offsets(Sharding_Num);
+void map_files(int thread_index){
+    if(thread_index>=Sharding_Num)return;
+    ifstream ifs(file_name);
+    const unsigned long pos=file_len*thread_index/Sharding_Num;
+    ifs.seekg(pos);
     string str;
-    while(!ifs.eof()){
+    //if not at file head, abandon the first line( let previous thread process it)
+    if(thread_index!=0)
+        ifs>>str;
+    hash<string> hasher;
+    while(ifs.tellg()<=pos+file_len/Sharding_Num){
         str.clear();
         ifs>>str;
         if(str.empty())continue;
-        ofss[hasher(str)%Sharding_Num]<<str<<endl;
+        int index=hasher(str)%Sharding_Num;
+        lock_guard<mutex> lg(map_ofss_mutexs[index]);
+        map_ofss[index]<<str<<endl;
     }
 
     ifs.close();
-    for(auto& ele:ofss)
-        ele.close();
 }
 void reduce_files(){
     for(int i=0;i<Sharding_Num;++i){
@@ -102,15 +109,32 @@ void merge(){
         ofs<<ele.first<<" "<<ele.second<<endl;
     ofs.close();
 }
+void test_thread(int i){
+    cout<<"thread: "<<i<<endl;
+}
+vector<thread> threads;
+void multi_thread_map(){
+    threads.reserve(core_num);
+    //open output streams
+    for(int i=0;i<Sharding_Num;++i)
+        map_ofss[i].open("../data/shard_" + to_string(i) + ".txt", ios::out);
+    for(int i=0;i<core_num;++i)
+        threads.emplace_back(map_files,i);
+
+    //wait for the mapping threads to end and close the resources
+    for(auto& t:threads)t.join();
+    for(auto& ofs:map_ofss)ofs.close();
+    threads.clear();
+}
 int main(){
-    //initiailize
     //get file length
     fstream fs(file_name);
     fs.seekg(0, ios_base::end);
     file_len = fs.tellg();
     fs.close();
-    map_files();
-//    reduce_files();
-  //  merge();
+
+    multi_thread_map();
+    reduce_files();
+    merge();
     return 0;
 }
