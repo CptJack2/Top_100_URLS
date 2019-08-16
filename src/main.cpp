@@ -9,33 +9,13 @@
 using namespace std;
 
 const int core_num=4;
-const unsigned long Sharding_Num=4;//120;
+const unsigned long Sharding_Num=100;
 const int TopK=100;
 const string file_name="../data/Data.txt";
 
 unsigned long file_len=0;
 vector<thread> threads;
 
-void thread_func(unsigned long shard_index){
-    unsigned long pos=file_len*shard_index/Sharding_Num;
-    fstream ifs(file_name);
-    //find a new line from the speicified sharding position
-    ifs.seekg(pos);
-    while(ifs.peek()!='\n')
-        ifs.seekg(++pos);
-    zset myzset;
-    string str;
-    //mind this while expression, it mustn't miss any line
-    do{
-        ifs>>str;
-        myzset.create_or_inc(str);
-    }while((pos=ifs.tellg())<=file_len*(shard_index+1)/Sharding_Num);
-    auto vec=myzset.pop(TopK);
-    fstream ofs("../data/res_"+to_string(shard_index)+".txt",ios::out);
-    for(auto ele:vec){
-        ofs<<ele.first<<endl<<ele.second<<endl;
-    }
-}
 vector<ofstream> map_ofss(Sharding_Num);
 vector<mutex> map_ofss_mutexs(Sharding_Num);
 void map_files(int thread_index) {
