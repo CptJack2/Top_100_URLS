@@ -12,7 +12,9 @@ const int core_num=4;
 const unsigned long Sharding_Num=2;//120;
 const int TopK=100;
 const string file_name="../data/Dataset.txt";
+
 unsigned long file_len=0;
+vector<thread> threads;
 
 void thread_func(unsigned long shard_index){
     unsigned long pos=file_len*shard_index/Sharding_Num;
@@ -36,30 +38,42 @@ void thread_func(unsigned long shard_index){
 }
 vector<ofstream> map_ofss(Sharding_Num);
 vector<mutex> map_ofss_mutexs(Sharding_Num);
-vector<unsigned long> map_offsets(Sharding_Num);
-void map_files(int thread_index){
-    if(thread_index>=Sharding_Num)return;
+void map_files(int thread_index) {
+    if (thread_index >= Sharding_Num)return;
     ifstream ifs(file_name);
-    const unsigned long pos=file_len*thread_index/Sharding_Num;
+    const unsigned long pos = file_len * thread_index / Sharding_Num;
     ifs.seekg(pos);
     string str;
     //if not at file head, abandon the first line( let previous thread process it)
-    if(thread_index!=0)
-        ifs>>str;
+    if (thread_index != 0)
+        ifs >> str;
     hash<string> hasher;
-    while(ifs.tellg()<=pos+file_len/Sharding_Num){
+    while (ifs.tellg() <= pos + file_len / Sharding_Num) {
         str.clear();
-        ifs>>str;
-        if(str.empty())continue;
-        int index=hasher(str)%Sharding_Num;
+        ifs >> str;
+        if (str.empty())continue;
+        int index = hasher(str) % Sharding_Num;
         lock_guard<mutex> lg(map_ofss_mutexs[index]);
-        map_ofss[index]<<str<<endl;
+        map_ofss[index] << str << endl;
     }
 
     ifs.close();
 }
-void reduce_files(){
-    for(int i=0;i<Sharding_Num;++i){
+void multi_thread_map() {
+    threads.clear();
+    //open output streams
+    for (int i = 0; i < Sharding_Num; ++i)
+        map_ofss[i].open("../data/shard_" + to_string(i) + ".txt", ios::out);
+    for (int i = 0; i < core_num; ++i)
+        threads.emplace_back(map_files, i);
+
+    //wait for the mapping threads to end and close the resources
+    for (auto &t:threads)t.join();
+    for (auto &ofs:map_ofss)ofs.close();
+    threads.clear();
+}
+void reduce_files(int thread_index){
+    for(int i=thread_index;i<Sharding_Num;i+=core_num){
         ifstream ifs;
         ifs.open("../data/shard_"+to_string(i)+".txt",ios::in);
         zset myzset;
@@ -80,6 +94,14 @@ void reduce_files(){
             ofs<<ele.first<<endl<<ele.second<<endl;
         ofs.close();
     }
+}
+void multi_thread_reduce(){
+    threads.clear();
+    for (int i = 0; i < core_num; ++i)
+        threads.emplace_back(reduce_files, i);
+    //wait for the mapping threads to end and close the resources
+    for (auto &t:threads)t.join();
+    threads.clear();
 }
 void merge(){
     typedef pair<string,int> ele_t;
@@ -112,20 +134,6 @@ void merge(){
 void test_thread(int i){
     cout<<"thread: "<<i<<endl;
 }
-vector<thread> threads;
-void multi_thread_map(){
-    threads.reserve(core_num);
-    //open output streams
-    for(int i=0;i<Sharding_Num;++i)
-        map_ofss[i].open("../data/shard_" + to_string(i) + ".txt", ios::out);
-    for(int i=0;i<core_num;++i)
-        threads.emplace_back(map_files,i);
-
-    //wait for the mapping threads to end and close the resources
-    for(auto& t:threads)t.join();
-    for(auto& ofs:map_ofss)ofs.close();
-    threads.clear();
-}
 int main(){
     //get file length
     fstream fs(file_name);
@@ -133,8 +141,10 @@ int main(){
     file_len = fs.tellg();
     fs.close();
 
-    multi_thread_map();
-    reduce_files();
+    threads.reserve(core_num);
+
+    //multi_thread_map();
+    multi_thread_reduce();
     merge();
     return 0;
 }
