@@ -9,9 +9,9 @@
 using namespace std;
 
 const int core_num=4;
-const unsigned long Sharding_Num=2;//120;
+const unsigned long Sharding_Num=4;//120;
 const int TopK=100;
-const string file_name="../data/Dataset.txt";
+const string file_name="../data/Data.txt";
 
 unsigned long file_len=0;
 vector<thread> threads;
