@@ -39,7 +39,6 @@ void thread_func(unsigned long shard_index){
 vector<ofstream> map_ofss(Sharding_Num);
 vector<mutex> map_ofss_mutexs(Sharding_Num);
 void map_files(int thread_index) {
-    if (thread_index >= Sharding_Num)return;
     ifstream ifs(file_name);
     const unsigned long pos = file_len * thread_index / Sharding_Num;
     ifs.seekg(pos);
@@ -143,7 +142,7 @@ int main(){
 
     threads.reserve(core_num);
 
-    //multi_thread_map();
+    multi_thread_map();
     multi_thread_reduce();
     merge();
     return 0;
