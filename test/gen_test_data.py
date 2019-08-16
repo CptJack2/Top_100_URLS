@@ -1,9 +1,9 @@
 import numpy
 #config
-distinct_urls_needed=10
+urls_needed=1000
 #normal distribution param
-mu=10
-sigma=1
+mu=500
+sigma=100
 #read in urls
 try:
     f=open('../test/urls.txt','r')
@@ -23,8 +23,12 @@ try:
     fa=open('../data/ans.txt','w')
 except Exception as e:
     print(e)
-indexs=numpy.random.randint(0, len(url_vec),distinct_urls_needed)
-nums = numpy.random.normal(mu, sigma,distinct_urls_needed)
+indexs=numpy.random.randint(0, len(url_vec), urls_needed)
+ind_set=set()
+for i in indexs:
+    ind_set.add(i)
+indexs=list(ind_set)
+nums = numpy.random.normal(mu, sigma,len(indexs))
 class url_t:
     url=""
     num=0
@@ -34,10 +38,11 @@ class url_t:
     def __lt__(self, other):
         return self.num>other.num
 ans_vec=[]
-for i in range(distinct_urls_needed):
-    for j in range(int(nums[i])):
+for i in range(len(indexs)):
+    num=int(nums[i])
+    ans_vec.append(url_t(url_vec[indexs[i]],num))
+    for j in range(num):
         f.write(url_vec[indexs[i]]+'\n')
-    ans_vec.append(url_t(url_vec[indexs[i]],int(nums[i])))
 ans_vec.sort()
 for ele in ans_vec:
     fa.write(ele.url+" "+str(ele.num)+'\n')
