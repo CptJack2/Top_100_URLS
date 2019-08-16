@@ -6,10 +6,9 @@
 
 using namespace std;
 
-const int core_num=4;
-const unsigned long Sharding_Num=2;//120;
+const unsigned long Sharding_Num=100;
 const int TopK=100;
-const string file_name="../data/Dataset.txt";
+const string file_name="../data/Data.txt";
 unsigned long file_len=0;
 
 void map_files(){
@@ -89,7 +88,7 @@ int main(){
     file_len = fs.tellg();
     fs.close();
     map_files();
-//    reduce_files();
-  //  merge();
+    reduce_files();
+    merge();
     return 0;
 }
