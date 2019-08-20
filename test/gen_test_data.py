@@ -1,4 +1,4 @@
-import numpy
+#import numpy
 #config
 urls_needed=1000
 #normal distribution param
@@ -68,7 +68,14 @@ def gen_normal_distributed(mu,sigma, urls_needed):
     fa.close()
 
 #main
-gen_from_ans()
+total=0
+for i in range(138):
+    f=open("../data/res_0_"+str(i)+".txt")
+    f.readline()
+    t=int(f.readline().strip())
+    total+=t
+print(total)
+#gen_from_ans()
 #read in urls
 # try:
 #     f=open('../test/urls.txt','r')

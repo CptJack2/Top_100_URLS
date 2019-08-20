@@ -80,7 +80,7 @@ vector<pair<string,int>> zset::pop(int num){
 void zset::create_or_inc(const string &key,int count){
     auto it=m_map.find(key);
     if(it==m_map.end()){
-        zmap_t::iterator it=m_map.insert(make_pair(key,node_t(1,0))).first;
+        zmap_t::iterator it=m_map.insert(make_pair(key,node_t(count,0))).first;
         m_vec.push_back(it);
         it->second.index=m_vec.size()-1;
         push_heap(m_vec.begin(),m_vec.end(),zset::fcmp_less);

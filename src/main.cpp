@@ -10,10 +10,10 @@
 using namespace std;
 
 const int core_num=4;
-const unsigned long Sharding_Num=100;
+const unsigned long Sharding_Num=4;
 const int TopK=100;
 const string file_name="../data/Data.txt";
-const long mem_lim=1*1024*1024*1024;
+const long mem_lim=1*1024;
 
 struct pended_t{
     int index;
@@ -132,37 +132,35 @@ void merge(){
 void reduce_pended_shard(int thread_index){
     int total_shards_done=0;
     for(int i=0;i<pended_shards.size();++i){
-        int next_shard_index=total_shards_done/core_num*(core_num+1)+thread_index;
-        if(next_shard_index>total_shards_done+pended_shards[i].sec_shard-1){
-            total_shards_done+=pended_shards[i].sec_shard;
-            continue;
-        }
+        for(int j=0;j<pended_shards[i].sec_shard;++j){
+            if((total_shards_done+j+1)%core_num!=thread_index)continue;
 
-        ifstream ifs("../data/shard_"+to_string(pended_shards[i].index)+".txt");
-        int sec_index=next_shard_index-total_shards_done;
-        ifs.seekg(0,ios::end);
-        unsigned long file_len=ifs.tellg();
-        ifs.close();
-        ifs.open("../data/shard_"+to_string(pended_shards[i].index)+".txt");
-        unsigned long pos = file_len * sec_index/ pended_shards[i].sec_shard;
-        ifs.seekg(pos);
-        
-        string str;
-        //if not at file head, abandon the first line( let previous thread process it)
-        if (sec_index != 0)
-            ifs >> str;
-        ofstream ofs("../data/res_"+to_string(pended_shards[i].index)+"_"+
-            to_string(sec_index)+".txt");
-        zset zset1;
-        while(ifs.tellg() <= pos + file_len / pended_shards[i].sec_shard){
-            ifs>>str;
-            zset1.create_or_inc(str);
-        }
+            ifstream ifs("../data/shard_"+to_string(pended_shards[i].index)+".txt");
+            ifs.seekg(0,ios::end);
+            const unsigned long file_len=ifs.tellg();
+            ifs.close();
+            ifs.open("../data/shard_"+to_string(pended_shards[i].index)+".txt");
+            const unsigned long pos = file_len * j/ pended_shards[i].sec_shard;
+            ifs.seekg(pos);
 
-        auto vec=zset1.pop(zset1.size());
-        for(auto& ele:vec)
-            ofs<<ele.first<<endl<<ele.second<<endl;
-        ofs.close();
+            string str;
+            //if not at file head, abandon the first line( let previous thread process it)
+            if (j != 0)
+                ifs >> str;
+            ofstream ofs("../data/res_"+to_string(pended_shards[i].index)+"_"+
+                to_string(j)+".txt");
+            zset zset1;
+            while(ifs.tellg() <= pos + file_len / pended_shards[i].sec_shard){
+                ifs>>str;
+                zset1.create_or_inc(str);
+            }
+
+            auto vec=zset1.pop(zset1.size());
+            for(auto& ele:vec)
+                ofs<<ele.first<<endl<<ele.second<<endl;
+            ofs.close();
+        }
+        total_shards_done+=pended_shards[i].sec_shard;
     }
 }
 void merge_pended_shard(int thread_index){
@@ -173,10 +171,9 @@ void merge_pended_shard(int thread_index){
                 to_string(j)+".txt");
             string str;
             int num;
-            while(!ifs.eof()){
-                ifs>>str>>num;
+            while(ifs>>str>>num)
+                //ifs>>str>>num;
                 zset1.create_or_inc(str,num);
-            }
         }
         ofstream ofs("../data/res_"+to_string(pended_shards[i].index)+".txt");
         auto vec=zset1.pop(zset1.size());
@@ -191,13 +188,17 @@ void multi_thread_reduce_pended_shard(){
         threads.emplace_back(reduce_pended_shard, i);
     for (auto &t:threads)t.join();
     threads.clear();
+//    for(int i=0;i<core_num;++i)
+//        reduce_pended_shard(i);
 }
 void multi_thread_merge_pended_shard(){
-    threads.clear();
-    for (int i = 0; i < core_num; ++i)
-        threads.emplace_back(reduce_pended_shard, i);
-    for (auto &t:threads)t.join();
-    threads.clear();
+//    threads.clear();
+//    for (int i = 0; i < core_num; ++i)
+//        threads.emplace_back(merge_pended_shard, i);
+//    for (auto &t:threads)t.join();
+//    threads.clear();
+    for(int i=0;i<core_num;++i)
+        merge_pended_shard(i);
 }
 int main(){
     //get file length
