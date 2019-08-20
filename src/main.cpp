@@ -5,6 +5,7 @@
 #include <list>
 #include <thread>
 #include <mutex>
+#include <math.h>
 
 using namespace std;
 
@@ -12,12 +13,20 @@ const int core_num=4;
 const unsigned long Sharding_Num=100;
 const int TopK=100;
 const string file_name="../data/Data.txt";
+const long mem_lim=1*1024*1024*1024;
+
+struct pended_t{
+    int index;
+    int sec_shard;
+    pended_t(int i,int s):index(i),sec_shard(s){}
+};
 
 unsigned long file_len=0;
 vector<thread> threads;
-
+vector<pended_t> pended_shards;
 vector<ofstream> map_ofss(Sharding_Num);
 vector<mutex> map_ofss_mutexs(Sharding_Num);
+
 void map_files(int thread_index) {
     ifstream ifs(file_name);
     const unsigned long pos = file_len * thread_index / Sharding_Num;
@@ -54,6 +63,16 @@ void multi_thread_map() {
 void reduce_files(int thread_index){
     for(int i=thread_index;i<Sharding_Num;i+=core_num){
         ifstream ifs;
+        ifs.open("../data/shard_"+to_string(i)+".txt",ios::in);
+        //get shard size, if over mem_lim, pend it for further operation
+        ifs.seekg(0,ios::end);
+        long fsize=ifs.tellg();
+        if(fsize>mem_lim) {
+            pended_shards.push_back(pended_t(i,ceil(double(fsize)/mem_lim)));
+            ifs.close();
+            continue;
+        }
+        ifs.close();
         ifs.open("../data/shard_"+to_string(i)+".txt",ios::in);
         zset myzset;
         string str;
@@ -110,8 +129,46 @@ void merge(){
         ofs<<ele.first<<" "<<ele.second<<endl;
     ofs.close();
 }
-void test_thread(int i){
-    cout<<"thread: "<<i<<endl;
+void do_pended_shard(int thread_index){
+    int total_shards_done=0;
+    for(int i=0;i<pended_shards.size();++i){
+        int next_shard_index=total_shards_done/core_num*(core_num+1)+thread_index;
+        if(next_shard_index>total_shards_done+pended_shards[i].sec_shard-1){
+            total_shards_done+=pended_shards[i].sec_shard;
+            continue;
+        }
+        ifstream ifs("../data/shard_"+to_string(i)+".txt");
+        int sec_index=0;
+        const unsigned long pos = file_len * thread_index / Sharding_Num;
+        ifs.seekg(pos);
+        string str;
+        //if not at file head, abandon the first line( let previous thread process it)
+        if (thread_index != 0)
+            ifs >> str;
+        ofstream ofs("../data/shard_"+to_string(i)+"_"+
+            to_string(sec_index)+".txt");
+        string str;
+        zset zset1;
+        while(!ifs.eof()){
+            ifs>>str;
+            zset1.create_or_inc(str);
+            if(ofs.tellp()>mem_lim) {
+                ofs.close();
+                ++sec_index;
+                ofs.open("../data/shard_"+to_string(i)+"_"+
+                    to_string(sec_index)+".txt");
+            }
+        }
+
+        const unsigned long pos = file_len * thread_index / Sharding_Num;
+        ifs.seekg(pos);
+        string str;
+        //if not at file head, abandon the first line( let previous thread process it)
+        if (thread_index != 0)
+            ifs >> str;
+        hash<string> hasher;
+    }
+
 }
 int main(){
     //get file length
