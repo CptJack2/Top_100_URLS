@@ -77,7 +77,7 @@ vector<pair<string,int>> zset::pop(int num){
         m_vec[i]->second.index=i;
     return ret;
 }
-void zset::create_or_inc(const string &key){
+void zset::create_or_inc(const string &key,int count){
     auto it=m_map.find(key);
     if(it==m_map.end()){
         zmap_t::iterator it=m_map.insert(make_pair(key,node_t(1,0))).first;
@@ -86,7 +86,7 @@ void zset::create_or_inc(const string &key){
         push_heap(m_vec.begin(),m_vec.end(),zset::fcmp_less);
     }
     else{
-        ++(it->second.count);
+        it->second.count+=count;
         //find the node's father, and adjust the vector to fullfill the heap's requirement
         heapify(it);
     }
