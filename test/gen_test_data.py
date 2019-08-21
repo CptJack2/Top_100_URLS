@@ -89,8 +89,8 @@ def test_map(shards):
     if passed:
         print("right mapping")
 #main
-#gen_from_ans()
-test_map(20)
+gen_from_ans()
+#test_map(2)
 # total=0
 # for i in range(138):
 #     f=open("../data/res_0_"+str(i)+".txt")

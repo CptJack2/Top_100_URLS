@@ -10,10 +10,10 @@
 using namespace std;
 
 const int core_num=4;
-const unsigned long Sharding_Num=4;
+const unsigned long Sharding_Num=5;
 const int TopK=100;
 const string file_name="../data/Data.txt";
-const long mem_lim=1*1024;
+const long mem_lim=10*1024;
 
 struct pended_t{
     int index;
@@ -29,17 +29,17 @@ vector<mutex> map_ofss_mutexs(Sharding_Num);
 
 void map_files(int thread_index) {
     ifstream ifs(file_name);
-    const unsigned long pos = file_len * thread_index / Sharding_Num;
+    const unsigned long pos = file_len * thread_index / core_num;
     ifs.seekg(pos);
     string str;
     //if not at file head, abandon the first line( let previous thread process it)
     if (thread_index != 0)
         ifs >> str;
     hash<string> hasher;
-    while (ifs.tellg() <= pos + file_len / Sharding_Num) {
-        str.clear();
-        ifs >> str;
-        if (str.empty())continue;
+    while (ifs.tellg() <= pos + file_len / core_num && ifs >> str) {
+//        str.clear();
+//        ifs >> str;
+        //if (str.empty())continue;
         int index = hasher(str) % Sharding_Num;
         lock_guard<mutex> lg(map_ofss_mutexs[index]);
         map_ofss[index] << str << endl;
@@ -150,10 +150,9 @@ void reduce_pended_shard(int thread_index){
             ofstream ofs("../data/res_"+to_string(pended_shards[i].index)+"_"+
                 to_string(j)+".txt");
             zset zset1;
-            while(ifs.tellg() <= pos + file_len / pended_shards[i].sec_shard){
-                ifs>>str;
+            while(ifs.tellg() <= pos + file_len / pended_shards[i].sec_shard
+                && ifs>>str)
                 zset1.create_or_inc(str);
-            }
 
             auto vec=zset1.pop(zset1.size());
             for(auto& ele:vec)
