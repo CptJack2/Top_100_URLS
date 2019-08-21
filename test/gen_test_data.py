@@ -1,9 +1,4 @@
-#import numpy
-#config
-urls_needed=1000
-#normal distribution param
-mu=500
-sigma=100
+import numpy
 
 global url_vec
 
@@ -58,24 +53,51 @@ def gen_normal_distributed(mu,sigma, urls_needed):
     for i in range(len(indexs)):
         num=int(nums[i])
         ans_vec.append(url_t(url_vec[indexs[i]],num))
-        for j in range(num):
-            f.write(url_vec[indexs[i]]+'\n')
     ans_vec.sort()
 
     for ele in ans_vec:
         fa.write(ele.url+" "+str(ele.num)+'\n')
+        for j in range(ele.num):
+            f.write(ele.url+'\n')
+
     f.close()
     fa.close()
 
+def test_map(shards):
+    f=open('../data/ans.txt','r')
+    ans={}
+    shard={}
+    for line in f:
+        t=line.strip().split(' ')
+        ans[t[0]]=int(t[1])
+    for i in range(shards):
+        f=open("../data/shard_"+str(i)+".txt",'r')
+        for line in f:
+            tl=line.strip()
+            if not tl in shard:
+                shard[tl]=1
+            else:
+                shard[tl]+=1
+    passed=True
+    for k in ans:
+        if not k in shard:
+            print("fuck wrong mapping! shard has no url: "+k)
+            passed=False
+        if ans[k]!=shard[k]:
+            print("fuck wrong mapping! url :" +k +" num not right shard: "+str(shard[k])+" ans: "+ans[k])
+            passed=False
+    if passed:
+        print("right mapping")
 #main
-total=0
-for i in range(138):
-    f=open("../data/res_0_"+str(i)+".txt")
-    f.readline()
-    t=int(f.readline().strip())
-    total+=t
-print(total)
 #gen_from_ans()
+test_map(20)
+# total=0
+# for i in range(138):
+#     f=open("../data/res_0_"+str(i)+".txt")
+#     f.readline()
+#     t=int(f.readline().strip())
+#     total+=t
+# print(total)
 #read in urls
 # try:
 #     f=open('../test/urls.txt','r')
@@ -88,5 +110,5 @@ print(total)
 #     url_vec.append(line)
 # f.close()
 #
-# gen_normal_distributed(mu,sigma,urls_needed)
+# gen_normal_distributed(3000,500,2000)
 
